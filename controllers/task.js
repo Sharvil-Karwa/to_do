@@ -1,53 +1,78 @@
+const List = require("../models/list");
 const Task = require("../models/task");
 
-exports.getTasks = (req, res) => {
-  Task.find()
-    .then((data) => res.json(data))
-    .catch((err) =>
-      res
-        .status(400)
-        .json({ message: "Failed to get tasks", error: err.message })
-    );
+exports.createTask = async function (req, res, next) {
+  try {
+    const list = await List.findById(req.params.id);
+    const { title, description } = req.body;
+    const task = await Task.create({
+      title,
+      description,
+    });
+    list.tasks.push(task);
+    list.save();
+    res.status(404).json({
+      list,
+      task,
+    });
+  } catch (err) {
+    res.status(404).json({
+      err,
+    });
+  }
 };
 
-exports.createTask = (req, res) => {
-  const newTask = new Task(req.body);
-  newTask
-    .save()
-    .then((data) => res.json({ message: "Task created successfully", data }))
-    .catch((err) =>
-      res
-        .status(400)
-        .json({ message: "Failed to create task", error: err.message })
-    );
+exports.getAllTasks = async function (req, res, next) {
+  try {
+    const list = await List.findById(req.params.id);
+    const tasks = list.tasks;
+    const data = {};
+    for (let i = 0; i < tasks.length; i++) {
+      const task = await Task.findById(tasks[i]);
+      data[i] = task;
+    }
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    res.status(404).json({
+      err,
+    });
+  }
 };
 
-exports.updateTask = (req, res) => {
-  Task.findByIdAndUpdate(req.params.id, req.body)
-    .then((data) => res.json({ message: "Task updated successfully", data }))
-    .catch((err) =>
-      res
-        .status(400)
-        .json({ message: "Failed to update task", error: err.message })
-    );
+exports.deleteTask = async function (req, res, next) {
+  try {
+    const task = await Task.findById(req.params.taskId);
+    const list = await List.findById(req.params.id);
+    list.tasks.remove(task);
+    list.save();
+    task.remove();
+    res.status(200).json({
+      success: true,
+      task,
+    });
+  } catch (err) {
+    res.status(404).json({
+      err,
+    });
+  }
 };
 
-exports.deleteTask = (req, res) => {
-  Task.findByIdAndDelete(req.params.id)
-    .then((data) => res.json({ message: "Task deleted successfully" }))
-    .catch((err) =>
-      res
-        .status(400)
-        .json({ message: "Failed to delete task", error: err.message })
-    );
-};
-
-exports.getTask = (req, res) => {
-  Task.findById(req.params.id)
-    .then((data) => res.json(data))
-    .catch((err) =>
-      res
-        .status(400)
-        .json({ message: "Failed to get task", error: err.message })
-    );
+exports.updateTask = async function (req, res, next) {
+  try {
+    const task = await Task.findById(req.params.taskId);
+    if (req.body.title) task.title = req.body.title;
+    if (req.body.description) task.description = req.body.description;
+    task.save();
+    res.status(200).json({
+      success: true,
+      task,
+    });
+  } catch (err) {
+    res.status(404).json({
+      err,
+    });
+  }
 };
